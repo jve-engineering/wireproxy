@@ -10,7 +10,7 @@ require (
 	github.com/things-go/go-socks5 v0.0.5
 	golang.org/x/net v0.38.0
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
-	suah.dev/protect v1.2.3
+	suah.dev/protect v1.2.4
 )
 
 require (
