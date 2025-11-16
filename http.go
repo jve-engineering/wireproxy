@@ -6,7 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"log"
+
+	//"log"
 	"net"
 	"net/http"
 	"strings"
@@ -21,6 +22,7 @@ type HTTPServer struct {
 	dial func(network, address string) (net.Conn, error)
 
 	authRequired bool
+	vtun         *VirtualTun
 }
 
 func (s *HTTPServer) authenticate(req *http.Request) (int, error) {
@@ -55,6 +57,7 @@ func (s *HTTPServer) handleConn(req *http.Request, conn net.Conn) (peer net.Conn
 		addr = net.JoinHostPort(addr, port)
 	}
 
+	s.vtun.logger.Verbosef("Got HTTP Connect to %s", addr)
 	peer, err = s.dial("tcp", addr)
 	if err != nil {
 		return peer, fmt.Errorf("tun tcp dial failed: %w", err)
@@ -76,6 +79,7 @@ func (s *HTTPServer) handle(req *http.Request) (peer net.Conn, err error) {
 		addr = net.JoinHostPort(addr, port)
 	}
 
+	s.vtun.logger.Verbosef("Got HTTP GET to %s", addr)
 	peer, err = s.dial("tcp", addr)
 	if err != nil {
 		return peer, fmt.Errorf("tun tcp dial failed: %w", err)
@@ -95,7 +99,7 @@ func (s *HTTPServer) serve(conn net.Conn) {
 	var rd = bufio.NewReader(conn)
 	req, err := http.ReadRequest(rd)
 	if err != nil {
-		log.Printf("read request failed: %s\n", err)
+		s.vtun.logger.Errorf("read request failed: %s", err)
 		return
 	}
 
@@ -106,7 +110,7 @@ func (s *HTTPServer) serve(conn net.Conn) {
 			resp.Header.Set("Proxy-Authenticate", "Basic realm=\"Proxy\"")
 		}
 		_ = resp.Write(conn)
-		log.Println(err)
+		s.vtun.logger.Errorf("authenticate failed: %s", err)
 		return
 	}
 
@@ -118,15 +122,15 @@ func (s *HTTPServer) serve(conn net.Conn) {
 		peer, err = s.handle(req)
 	default:
 		_ = responseWith(req, http.StatusMethodNotAllowed).Write(conn)
-		log.Printf("unsupported protocol: %s\n", req.Method)
+		s.vtun.logger.Errorf("unsupported protocol: %s", req.Method)
 		return
 	}
 	if err != nil {
-		log.Printf("dial proxy failed: %s\n", err)
+		s.vtun.logger.Errorf("dial proxy failed: %s", err)
 		return
 	}
 	if peer == nil {
-		log.Println("dial proxy failed: peer nil")
+		s.vtun.logger.Errorf("dial proxy failed: peer nil")
 		return
 	}
 
@@ -149,7 +153,8 @@ func (s *HTTPServer) serve(conn net.Conn) {
 func (s *HTTPServer) ListenAndServe(network, addr string) error {
 	server, err := net.Listen(network, addr)
 	if err != nil {
-		return fmt.Errorf("listen tcp failed: %w", err)
+		s.vtun.logger.Errorf("listen tcp failed: %w", err)
+		return err
 	}
 	defer func(server net.Listener) {
 		_ = server.Close()
@@ -157,7 +162,8 @@ func (s *HTTPServer) ListenAndServe(network, addr string) error {
 	for {
 		conn, err := server.Accept()
 		if err != nil {
-			return fmt.Errorf("accept request failed: %w", err)
+			s.vtun.logger.Errorf("accept request failed: %w", err)
+			return err
 		}
 		go func(conn net.Conn) {
 			s.serve(conn)
