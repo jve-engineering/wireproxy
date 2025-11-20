@@ -50,9 +50,9 @@ with a discount using [this referral link](https://iproyal.com/?r=795836)! 🚀
 ```
 
 ```bash
-usage: wireproxy [-h|--help] [-c|--config "<value>"] [-s|--silent]
-                 [-d|--daemon] [-i|--info "<value>"] [-v|--version]
-                 [-n|--configtest]
+usage: wireproxy [-h|--help] [-c|--config "<value>"] [-s|--silent] 
+                 [-v|--verbose] [-d|--daemon] [-i|--info "<value>"] 
+                 [-V|--version] [-n|--configtest]
 
                  Userspace wireguard client for proxying
 
@@ -61,10 +61,11 @@ Arguments:
   -h  --help        Print help information
   -c  --config      Path of configuration file
                     Default paths: /etc/wireproxy/wireproxy.conf, $HOME/.config/wireproxy.conf
-  -s  --silent      Silent mode
+  -s  --silent      Logging: Set silent mode
+  -v  --verbose     Logging: Set verbose mode
   -d  --daemon      Make wireproxy run in background
   -i  --info        Specify the address and port for exposing health status
-  -v  --version     Print version
+  -V  --version     Print version
   -n  --configtest  Configtest mode. Only check the configuration file for
                     validity.
 ```

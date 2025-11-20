@@ -176,10 +176,12 @@ func main() {
 	parser := argparse.NewParser("wireproxy", "Userspace wireguard client for proxying")
 
 	config := parser.String("c", "config", &argparse.Options{Help: "Path of configuration file"})
-	silent := parser.Flag("s", "silent", &argparse.Options{Help: "Silent mode"})
+	silent := parser.Flag("s", "silent", &argparse.Options{Help: "Logging: Set silent mode"})
+	verbose := parser.Flag("v", "verbose", &argparse.Options{Help: "Logging: Set verbose mode"})
+
 	daemon := parser.Flag("d", "daemon", &argparse.Options{Help: "Make wireproxy run in background"})
 	info := parser.String("i", "info", &argparse.Options{Help: "Specify the address and port for exposing health status"})
-	printVerison := parser.Flag("v", "version", &argparse.Options{Help: "Print version"})
+	printVerison := parser.Flag("V", "version", &argparse.Options{Help: "Print version"})
 	configTest := parser.Flag("n", "configtest", &argparse.Options{Help: "Configtest mode. Only check the configuration file for validity."})
 
 	err := parser.Parse(args)
@@ -238,14 +240,18 @@ func main() {
 	// https://github.com/WireGuard/wireguard-go/blob/master/device/logger.go#L39
 	// so redirect STDOUT to STDERR, we don't want to print anything to STDOUT anyways
 	os.Stdout = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
-	logLevel := device.LogLevelVerbose
+	logLevel := device.LogLevelError
 	if *silent {
 		logLevel = device.LogLevelSilent
+
+	} else if *verbose {
+		logLevel = device.LogLevelVerbose
 	}
 
 	lock("ready")
+	var errorLogger = device.NewLogger(logLevel, "wireproxy - ")
 
-	tun, err := wireproxy.StartWireguard(conf.Device, logLevel)
+	tun, err := wireproxy.StartWireguard(conf.Device, errorLogger)
 	if err != nil {
 		log.Fatal(err)
 	}
